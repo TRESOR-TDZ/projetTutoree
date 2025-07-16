@@ -10,6 +10,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rules\Password;
 
 class AuthController extends Controller
 {
@@ -18,8 +19,14 @@ class AuthController extends Controller
         $validator = Validator::make($request->all(), [
             'name'     => 'required|string',
             'email'    => 'required|email|unique:users',
-            'password' => 'required|confirmed',
             'role'     => 'nullable',
+            'password' => ['required', 'confirmed', Password::min(8)
+                ->mixedCase()     // Majuscules et minuscules
+                ->letters()       // Lettres requises
+                ->numbers()       // Chiffres requis
+                // ->symbols()       // Caractères spéciaux requis
+                ->uncompromised() // Non présent dans des fuites de données connues
+            ],
         ]);
 
         if ($validator->fails()) {

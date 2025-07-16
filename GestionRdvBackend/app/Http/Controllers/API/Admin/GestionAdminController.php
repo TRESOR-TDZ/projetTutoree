@@ -13,6 +13,8 @@ use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Response;
 use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Validation\Rules\Password;
+
 
 class GestionAdminController extends Controller
 {
@@ -73,7 +75,13 @@ class GestionAdminController extends Controller
         $validator = Validator::make($request->all(), [
             'name'     => 'required|string|max:255',
             'email'    => 'required|email|unique:users,email',
-            'password' => 'required|string|min:6|confirmed',
+            'password' => ['required', 'confirmed', Password::min(8)
+                ->mixedCase()     // Majuscules et minuscules
+                ->letters()       // Lettres requises
+                ->numbers()       // Chiffres requis
+                // ->symbols()       // Caractères spéciaux requis
+                ->uncompromised() // Non présent dans des fuites de données connues
+            ],
         ]);
 
         if ($validator->fails()) {
@@ -251,7 +259,7 @@ class GestionAdminController extends Controller
                 ->setPaper('A4', 'portrait');
 
         $date = now()->format('d-m-Y_His');
-        $fileName = "liste_utilisateurs_$date.pdf";
+        $fileName = "listes_utilisateurs(admin_systeme)_$date.pdf";
 
         return Response::make($pdf->output(), 200, [
             'Content-Type' => 'application/pdf',
@@ -307,7 +315,7 @@ class GestionAdminController extends Controller
         };
 
         $date = now()->format('d-m-Y_His');
-        $fileName = "utilisateurs_$date.xlsx";
+        $fileName = "listes_utilisateurs(admin_systeme)_$date.xlsx";
 
         return Excel::download($export, $fileName);
     }

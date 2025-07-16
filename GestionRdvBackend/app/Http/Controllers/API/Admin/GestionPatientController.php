@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Structure;
 use Illuminate\Http\Request;
 
 use App\Models\User;
@@ -11,32 +12,56 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Database\QueryException;
 
+use Illuminate\Support\Facades\Response;
+use Maatwebsite\Excel\Facades\Excel;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Validation\Rules\Password;
+
 class GestionPatientController extends Controller
 {
     // -----------------------------------------------------
-    // Affichage de tout les administrateurs
+    // Affichage de tout les patients
     // -----------------------------------------------------
-    public function index()
+    public function index(Request $request)
     {
         try {
-            $admins = User::where('role', 3)->get();
+            // Initialiser la requête avec relation 'structure'
+            $query = User::with('structure')->where('role', 0);
+
+            // Appliquer filtre de recherche si présent
+            if ($request->filled('search')) {
+                $search = $request->search;
+
+                $query->where(function($q) use ($search) {
+                    $q->where('name', 'like', "%$search%")
+                    ->orWhere('phone', 'like', "%$search%")
+                    ->orWhere('email', 'like', "%$search%")
+                    ->orWhereHas('structure', function ($sq) use ($search) {
+                        $sq->where('nom', 'like', "%$search%");
+                    });
+                });
+            }
+
+            $patients = $query->latest()->get();
+            $structures = Structure::all();
 
             return response()->json([
-                'status' => 'success',
-                'admins' => $admins
+                'status'     => 'success',
+                'patients'     => $patients,
+                'structures' => $structures
             ], 200);
 
         } catch (\Exception $e) {
             return response()->json([
                 'status'  => 'error',
-                'message' => 'Une erreur est survenue lors de la récupération des administrateurs',
+                'message' => 'Une erreur est survenue lors de la récupération des patients',
                 'error'   => $e->getMessage()
             ], 500);
         }
     }
 
     // -----------------------------------------------------
-    // Interface de creation des administrateurs
+    // Interface de creation des patients
     // -----------------------------------------------------
     public function create()
     {
@@ -51,7 +76,13 @@ class GestionPatientController extends Controller
         $validator = Validator::make($request->all(), [
             'name'     => 'required|string|max:255',
             'email'    => 'required|email|unique:users,email',
-            'password' => 'required|string|min:6|confirmed',
+            'password' => ['required', 'confirmed', Password::min(8)
+                ->mixedCase()     // Majuscules et minuscules
+                ->letters()       // Lettres requises
+                ->numbers()       // Chiffres requis
+                // ->symbols()       // Caractères spéciaux requis
+                ->uncompromised() // Non présent dans des fuites de données connues
+            ],
         ]);
 
         if ($validator->fails()) {
@@ -67,7 +98,7 @@ class GestionPatientController extends Controller
             'name'     => $request->name,
             'email'    => $request->email,
             'password' => Hash::make($request->password),
-            'role'     => '2',
+            'role'     => '0',
         ]);
 
         return response()->json([
@@ -83,7 +114,7 @@ class GestionPatientController extends Controller
     public function show($id)
     {
         try {
-            $user = User::find($id);
+            $user = User::where('role', 0)->find($id);
 
             if (!$user) {
                 return response()->json([
@@ -112,7 +143,7 @@ class GestionPatientController extends Controller
     public function edit($id)
     {
         try {
-            $user = User::find($id);
+            $user = User::where('role', 0)->find($id);
 
             if (!$user) {
                 return response()->json([
@@ -141,7 +172,7 @@ class GestionPatientController extends Controller
     public function update(Request $request, $id)
     {
         try {
-            $user = User::find($id);
+            $user = User::where('role', 0)->find($id);
 
             if (!$user) {
                 return response()->json([
@@ -201,7 +232,7 @@ class GestionPatientController extends Controller
     // -----------------------------------------------------
     public function destroy($id)
     {
-        $user = User::find($id);
+        $user = User::where('role', 0)->find($id);
 
         if (!$user) {
             return response()->json([
@@ -216,5 +247,77 @@ class GestionPatientController extends Controller
             'status'  => 'success',
             'message' => 'Utilisateur supprimé avec succès'
         ], 200);
+    }
+
+    // -------------------------------------------------------------
+    // Telechargement de la listes des patients en format PDF
+    // -------------------------------------------------------------
+    public function exportPdfApi()
+    {
+        $users = User::with('structure')->where('role', 0)->get();
+
+        $pdf = Pdf::loadView('Documents.AdminSysteme.listes_patient_pdf', compact('users'))
+                ->setPaper('A4', 'portrait');
+
+        $date = now()->format('d-m-Y_His');
+        $fileName = "listes_utilisateurs(patients)_$date.pdf";
+
+        return Response::make($pdf->output(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => "attachment; filename=\"$fileName\"",
+        ]);
+    }
+
+    // -------------------------------------------------------------
+    // Telechargement de la listes des patients en format Excel
+    // -------------------------------------------------------------
+    public function exportExcelApi()
+    {
+        $utilisateurs = User::with('structure')->where('role', 0)
+            ->select('name', 'email', 'code_phone', 'phone', 'gender', 'birthday', 'structure_id')
+            ->get()
+            ->map(function ($user) {
+                return [
+                    'Nom' => $user->name,
+                    'Email' => $user->email,
+                    'Indicatif' => $user->code_phone,
+                    'Téléphone' => $user->phone,
+                    'Genre' => $user->gender,
+                    'Naissance' => $user->birthday,
+                    'Structure' => $user->structure->nom ?? 'Non assignée',
+                ];
+            });
+
+        $export = new class($utilisateurs) implements \Maatwebsite\Excel\Concerns\FromCollection, \Maatwebsite\Excel\Concerns\WithHeadings {
+            private $data;
+
+            public function __construct($data)
+            {
+                $this->data = $data;
+            }
+
+            public function collection()
+            {
+                return collect($this->data);
+            }
+
+            public function headings(): array
+            {
+                return [
+                    'Nom',
+                    'Email',
+                    'Indicatif',
+                    'Téléphone',
+                    'Genre',
+                    'Naissance',
+                    'Structure',
+                ];
+            }
+        };
+
+        $date = now()->format('d-m-Y_His');
+        $fileName = "listes_utilisateurs(patients)_$date.xlsx";
+
+        return Excel::download($export, $fileName);
     }
 }

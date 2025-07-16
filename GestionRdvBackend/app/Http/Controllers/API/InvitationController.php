@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rules\Password;
 
 class InvitationController extends Controller
 {
@@ -60,7 +61,15 @@ class InvitationController extends Controller
 
 
             $structure = Structure::where('matricule', $request->structure_id)->first();
-            $roleLabel = $request->role == 1 ? 'Docteur' : 'Administrateur Structure';
+
+            $roles = [
+                0 => 'Patient',
+                1 => 'Docteur',
+                2 => 'Administrateur Structure',
+                3 => 'Administrateur Système',
+            ];
+
+            $roleLabel = $roles[$request->role] ?? 'Rôle inconnu';
 
             Mail::to($request->email)->send(new Invitations(
                 $url,
@@ -126,13 +135,18 @@ class InvitationController extends Controller
         }
 
         $request->validate([
-            'name_first' => 'required',
-            'name_last' => 'required',
+            'name' => 'required',
             'code_phone' => 'required',
             'phone' => 'required',
-            'birth_date' => 'nullable|date',
+            'birthday' => 'nullable|date',
             'gender' => 'nullable|in:Homme,Femme,Autre',
-            'password' => 'required|min:6|confirmed',
+            'password' => ['required', 'confirmed', Password::min(8)
+                ->mixedCase()     // Majuscules et minuscules
+                ->letters()       // Lettres requises
+                ->numbers()       // Chiffres requis
+                // ->symbols()       // Caractères spéciaux requis
+                ->uncompromised() // Non présent dans des fuites de données connues
+            ],
         ]);
 
         $prefix = match ($invitation->type) {
@@ -146,18 +160,13 @@ class InvitationController extends Controller
 
         $user = User::create([
             'matricule' => $matricule,
-            'name_first' => $request->name_first,
-            'name_last' => $request->name_last,
+            'name' => $request->name,
             'email' => $request->email,
             'code_phone' => $request->code_phone,
             'phone' => $request->phone,
-            'birth_date' => $request->birth_date,
+            'birthday' => $request->birthday,
             'gender' => $request->gender,
-            'pays' => 'undefined',
-            'ville' => 'undefined',
-            'region' => 'undefined',
-            'point_reperage' => 'undefined',
-            'type' => $invitation->type,
+            'role' => $invitation->role,
             'structure_id' => $invitation->structure_id,
             'password' => Hash::make($request->password),
         ]);

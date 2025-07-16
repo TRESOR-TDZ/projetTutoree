@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\API\Admin\GestionAdminController;
+use App\Http\Controllers\API\Admin\GestionPatientController;
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\InvitationController;
 use Illuminate\Http\Request;
@@ -46,15 +47,26 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/admin-systeme/store/admin-systeme', [GestionAdminController::class, 'store'])->name('admin-systeme.store');          // Ajouter un admin
         Route::put('/admin-systeme/update/admin-systeme/{id}', [GestionAdminController::class, 'update'])->name('admin-systeme.update');     // Modifier un admin
         Route::delete('/admin-systeme/destroy/admin-systeme/{id}', [GestionAdminController::class, 'destroy'])->name('admin-systeme.destroy');// Supprimer un admin
-        Route::get('/admin-systeme/edit/admin-systeme{id}', [GestionAdminController::class, 'edit'])->name('admin-systeme.edit');    // (optionnel) Formulaire d'édition
+        Route::get('/admin-systeme/edit/admin-systeme/{id}', [GestionAdminController::class, 'edit'])->name('admin-systeme.edit');    // (optionnel) Formulaire d'édition
 
-        Route::get('/admin-systeme/download/liste/excel', [GestionAdminController::class, 'exportExcelApi']);
-        Route::get('/admin-systeme/download/liste/pdf', [GestionAdminController::class, 'exportPdfApi']);
+        Route::get('/admin-systeme/download/liste/admin-systeme/excel', [GestionAdminController::class, 'exportExcelApi']);
+        Route::get('/admin-systeme/download/liste/admin-systeme/pdf', [GestionAdminController::class, 'exportPdfApi']);
+
+        // Gestion Patient
+        Route::get('/admin-systeme/view/patient', [GestionPatientController::class, 'index'])->name('admin-systeme.index');           // Liste des admin systeme
+        Route::get('/admin-systeme/show/patient/{id}', [GestionPatientController::class, 'show'])->name('admin-systeme.show');         // Voir un admin
+        Route::post('/admin-systeme/store/patient', [GestionPatientController::class, 'store'])->name('admin-systeme.store');          // Ajouter un admin
+        Route::put('/admin-systeme/update/patient/{id}', [GestionPatientController::class, 'update'])->name('admin-systeme.update');     // Modifier un admin
+        Route::delete('/admin-systeme/destroy/patient/{id}', [GestionPatientController::class, 'destroy'])->name('admin-systeme.destroy');// Supprimer un admin
+        Route::get('/admin-systeme/edit/patient/{id}', [GestionPatientController::class, 'edit'])->name('admin-systeme.edit');    // (optionnel) Formulaire d'édition
+
+        Route::get('/admin-systeme/download/liste/patient/excel', [GestionPatientController::class, 'exportExcelApi']);
+        Route::get('/admin-systeme/download/liste/patient/pdf', [GestionPatientController::class, 'exportPdfApi']);
 
         // Invitation
-        Route::get('/admin/view/invitations', [InvitationController::class, 'index'])->name('invitation');
-        Route::post('admin/invitation/users', [InvitationController::class, 'store'])->name('invitations.store');
-        Route::delete('/admin/destroy/invitations/{id}', [InvitationController::class, 'destroy'])->name('invitations.destroy');
+        Route::get('/admin-systeme/view/invitations', [InvitationController::class, 'index'])->name('invitation');
+        Route::post('admin-systeme/invitation/users', [InvitationController::class, 'store'])->name('invitations.store');
+        Route::delete('/admin-systeme/destroy/invitations/{id}', [InvitationController::class, 'destroy'])->name('invitations.destroy');
 
     });
 
