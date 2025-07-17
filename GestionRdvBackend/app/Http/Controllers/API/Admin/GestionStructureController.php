@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Structure;
 use Illuminate\Http\Request;
 
 use App\Models\User;
@@ -10,33 +11,60 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Log;
+
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class GestionStructureController extends Controller
 {
     // -----------------------------------------------------
-    // Affichage de tout les administrateurs
+    // Affichage de tout les structures
     // -----------------------------------------------------
-    public function index()
+    public function index(Request $request)
     {
         try {
-            $admins = User::where('role', 3)->get();
+            $query = Structure::query();
+
+            if ($request->filled('search')) {
+                $search = $request->search;
+                $query->where(function ($q) use ($search) {
+                    $q->where('nom', 'like', "%$search%")
+                        ->orWhere('email', 'like', "%$search%")
+                        ->orWhere('telephone', 'like', "%$search%")
+                        ->orWhere('adresse', 'like', "%$search%")
+                        ->orWhere('matricule', 'like', "%$search%");
+                });
+            }
+
+            if ($request->filled('type_structure')) {
+                $query->where('type_structure', $request->type_structure);
+            }
+
+            if ($request->filled('created_at')) {
+                $query->whereDate('created_at', $request->created_at);
+            }
+
+            $structures = $query->orderBy('created_at', 'desc')->paginate(10);
 
             return response()->json([
-                'status' => 'success',
-                'admins' => $admins
+                'success' => true,
+                'message' => 'Structures récupérées avec succès.',
+                'data' => $structures
             ], 200);
-
         } catch (\Exception $e) {
+            Log::error('Erreur lors de la récupération des structures : ' . $e->getMessage());
+
             return response()->json([
-                'status'  => 'error',
-                'message' => 'Une erreur est survenue lors de la récupération des administrateurs',
-                'error'   => $e->getMessage()
+                'success' => false,
+                'message' => 'Erreur lors de la récupération des structures.',
+                'error' => $e->getMessage()
             ], 500);
         }
     }
 
     // -----------------------------------------------------
-    // Interface de creation des administrateurs
+    // Interface de creation des structures
     // -----------------------------------------------------
     public function create()
     {
@@ -49,9 +77,16 @@ class GestionStructureController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'name'     => 'required|string|max:255',
-            'email'    => 'required|email|unique:users,email',
-            'password' => 'required|string|min:6|confirmed',
+            'image'          => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'nom'            => 'required|string|max:255',
+            'email'          => 'required|email|unique:structures,email',
+            'telephone'      => 'nullable|string|max:20',
+            'code_telephone' => 'nullable|string|max:10',
+            'adresse'        => 'nullable|string|max:255',
+            'service'        => 'nullable|string|max:255',
+            'type_structure' => 'required|string|max:100',
+            'horaires_debut'       => 'nullable|string|max:100',
+            'horaires_fin'       => 'nullable|string|max:100',
         ]);
 
         if ($validator->fails()) {
@@ -62,19 +97,48 @@ class GestionStructureController extends Controller
             ], 422);
         }
 
-        $admin = User::create([
-            'matricule' => 'ADM' . date('YmdHis') . rand(100, 999), // Génération d'un matricule unique
-            'name'     => $request->name,
-            'email'    => $request->email,
-            'password' => Hash::make($request->password),
-            'role'     => '2',
-        ]);
+        try {
+            $fileName = null;
 
-        return response()->json([
-            'status'  => 'success',
-            'message' => 'Administrateur ajouté avec succès',
-            'data'    => $admin,
-        ], 201);
+            if ($request->hasFile('image')) {
+                $file = $request->file('image');
+                $extension = $file->getClientOriginalExtension();
+                $fileName = Str::uuid() . '.' . $extension;
+
+                // Stocker dans storage/app/public/structures
+                $file->storeAs('structures', $fileName, 'public');
+
+            }
+
+            $structure = Structure::create([
+                'image'          => $fileName,
+                'matricule'      => 'STR' . now()->format('YmdHis') . rand(100, 999),
+                'nom'            => $request->nom,
+                'email'          => $request->email,
+                'telephone'      => $request->telephone,
+                'code_telephone' => $request->code_telephone,
+                'adresse'        => $request->adresse,
+                'service'        => $request->service,
+                'type_structure' => $request->type_structure,
+                'horaires_debut'       => $request->horaires_debut,
+                'horaires_fin'       => $request->horaires_fin,
+            ]);
+
+            return response()->json([
+                'status'     => 'success',
+                'message'    => 'Structure enregistrée avec succès',
+                'data'       => $structure,
+                'image_url'  => $fileName ? asset('storage/structures/' . $fileName) : null,
+            ], 201);
+        } catch (\Exception $e) {
+            Log::error('Erreur lors de l’enregistrement de la structure : ' . $e->getMessage());
+
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Erreur serveur lors de la création de la structure.',
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
     }
 
     // -----------------------------------------------------
@@ -82,28 +146,20 @@ class GestionStructureController extends Controller
     // -----------------------------------------------------
     public function show($id)
     {
-        try {
-            $user = User::find($id);
+        $structure = Structure::find($id);
 
-            if (!$user) {
-                return response()->json([
-                    'status'  => 'error',
-                    'message' => 'Utilisateur introuvable'
-                ], 404);
-            }
-
+        if (!$structure) {
             return response()->json([
-                'status' => 'success',
-                'user'   => $user
-            ], 200);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Une erreur est survenue lors de la récupération de l’utilisateur',
-                'error'   => $e->getMessage()
-            ], 500);
+                'status' => 'error',
+                'message' => 'Structure non trouvée',
+            ], 404);
         }
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $structure,
+            'image_url' => $structure->image ? asset('storage/structures/' . $structure->image) : null,
+        ]);
     }
 
     // -----------------------------------------------------
@@ -111,28 +167,20 @@ class GestionStructureController extends Controller
     // -----------------------------------------------------
     public function edit($id)
     {
-        try {
-            $user = User::find($id);
+        // Recherche de la structure par ID
+        $structure = Structure::find($id);
 
-            if (!$user) {
-                return response()->json([
-                    'status'  => 'error',
-                    'message' => 'Utilisateur introuvable'
-                ], 404);
-            }
-
+        // Vérifie si la structure existe
+        if (!$structure) {
             return response()->json([
-                'status' => 'success',
-                'user'   => $user
-            ], 200);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Une erreur est survenue lors de la récupération de l’utilisateur',
-                'error'   => $e->getMessage()
-            ], 500);
+                'message' => 'Structure non trouvée.'
+            ], 404);
         }
+
+        // Retourne la structure au format JSON
+        return response()->json([
+            'structure' => $structure
+        ], 200);
     }
 
     // -----------------------------------------------------
@@ -140,81 +188,117 @@ class GestionStructureController extends Controller
     // -----------------------------------------------------
     public function update(Request $request, $id)
     {
-        try {
-            $user = User::find($id);
+        $structure = Structure::find($id);
 
-            if (!$user) {
-                return response()->json([
-                    'status'  => 'error',
-                    'message' => 'Utilisateur introuvable'
-                ], 404);
+        if (!$structure) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Structure non trouvée',
+            ], 404);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'image'          => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'nom'            => 'required|string|max:255',
+            'email'          => 'required|email|unique:structures,email,' . $structure->id,
+            'telephone'      => 'nullable|string|max:20',
+            'code_telephone' => 'nullable|string|max:10',
+            'adresse'        => 'nullable|string|max:255',
+            'service'        => 'nullable|string|max:255',
+            'type_structure' => 'required|string|max:100',
+            'horaires_debut' => 'required|string|max:100',
+            'horaires_fin'   => 'required|string|max:100',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Erreur de validation',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        try {
+            if ($request->hasFile('image')) {
+                // Supprimer l'ancienne image si elle existe
+                if ($structure->image && Storage::disk('public')->exists('structures/' . $structure->image)) {
+                    Storage::disk('public')->delete('structures/' . $structure->image);
+                }
+
+                $file = $request->file('image');
+                $extension = $file->getClientOriginalExtension();
+                $fileName = Str::uuid() . '.' . $extension;
+                $file->storeAs('structures', $fileName, 'public');
+
+                $structure->image = $fileName;
             }
 
-            $validated = $request->validate([
-                'name'       => 'sometimes|string|max:255',
-                'email'      => 'sometimes|email|unique:users,email,' . $user->id,
-                'birthday'   => 'nullable|date',
-                'gender'     => 'nullable|string|in:male,female,other',
-                'code_phone' => 'nullable|string|max:10',
-                'phone'      => 'nullable|string|max:20',
-                'role'       => 'nullable|string|in:0,1,2,3', // adapte selon tes rôles
-                'password'   => 'nullable|string|min:6|confirmed',
+            // Mise à jour des champs
+            $structure->update([
+                'nom'            => $request->nom,
+                'email'          => $request->email,
+                'telephone'      => $request->telephone,
+                'code_telephone' => $request->code_telephone,
+                'adresse'        => $request->adresse,
+                'service'        => $request->service,
+                'type_structure' => $request->type_structure,
+                'horaires_debut' => $request->horaires_debut,
+                'horaires_fin'   => $request->horaires_fin,
             ]);
 
-            if (!empty($validated['password'])) {
-                $validated['password'] = Hash::make($validated['password']);
-            } else {
-                unset($validated['password']);
-            }
-
-            $user->update($validated);
-
             return response()->json([
-                'status'  => 'success',
-                'message' => 'Utilisateur mis à jour avec succès',
-                'user'    => $user
-            ], 200);
-
-        } catch (ValidationException $e) {
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Erreur de validation',
-                'errors'  => $e->errors()
-            ], 422);
-        } catch (QueryException $e) {
-            return response()->json([
-                'status'  => 'error',
-                'message' => 'Erreur lors de la mise à jour',
-                'error'   => $e->getMessage()
-            ], 500);
+                'status' => 'success',
+                'message' => 'Structure mise à jour avec succès',
+                'data' => $structure,
+                'image_url' => $structure->image ? asset('storage/structures/' . $structure->image) : null,
+            ]);
         } catch (\Exception $e) {
+            Log::error('Erreur lors de la mise à jour de la structure : ' . $e->getMessage());
+
             return response()->json([
-                'status'  => 'error',
-                'message' => 'Une erreur est survenue',
-                'error'   => $e->getMessage()
+                'status' => 'error',
+                'message' => 'Erreur serveur lors de la mise à jour.',
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
+
 
     // -----------------------------------------------------
     // Suppression de l'administrateur
     // -----------------------------------------------------
     public function destroy($id)
     {
-        $user = User::find($id);
+        $structure = Structure::find($id);
 
-        if (!$user) {
+        if (!$structure) {
             return response()->json([
-                'status'  => 'error',
-                'message' => 'Utilisateur introuvable'
+                'status' => 'error',
+                'message' => 'Structure non trouvée',
             ], 404);
         }
 
-        $user->delete();
+        try {
+            // Supprimer l'image liée si elle existe
+            if ($structure->image && Storage::disk('public')->exists('structures/' . $structure->image)) {
+                Storage::disk('public')->delete('structures/' . $structure->image);
+            }
 
-        return response()->json([
-            'status'  => 'success',
-            'message' => 'Utilisateur supprimé avec succès'
-        ], 200);
+            $structure->delete();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Structure supprimée avec succès',
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Erreur lors de la suppression de la structure : ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Erreur serveur lors de la suppression.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
+
 }

@@ -136,6 +136,7 @@ class InvitationController extends Controller
 
         $request->validate([
             'name' => 'required',
+            'email'    => 'required|email|unique:users,email',
             'code_phone' => 'required',
             'phone' => 'required',
             'birthday' => 'nullable|date',

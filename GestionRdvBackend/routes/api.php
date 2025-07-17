@@ -4,6 +4,7 @@ use App\Http\Controllers\API\Admin\GestionAdminController;
 use App\Http\Controllers\API\Admin\GestionAdminStructureController;
 use App\Http\Controllers\API\Admin\GestionDoctorController;
 use App\Http\Controllers\API\Admin\GestionPatientController;
+use App\Http\Controllers\API\Admin\GestionStructureController;
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\InvitationController;
 use Illuminate\Http\Request;
@@ -86,6 +87,14 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('/admin-systeme/download/liste/docteur/excel', [GestionDoctorController::class, 'exportExcelApi']);
         Route::get('/admin-systeme/download/liste/docteur/pdf', [GestionDoctorController::class, 'exportPdfApi']);
+
+        // Gestion Structures
+        Route::get('/admin-systeme/view/structures', [GestionStructureController::class, 'index'])->name('structure.index');           // Liste des structures
+        Route::post('/admin-systeme/store/structures', [GestionStructureController::class, 'store'])->name('structure.store');          // Ajouter une structure
+        Route::get('/admin-systeme/show/structures/{id}', [GestionStructureController::class, 'show'])->name('structure.show');         // Voir une structure
+        Route::put('/admin-systeme/update/structures/{id}', [GestionStructureController::class, 'update'])->name('structure.update');     // Modifier une structure
+        Route::delete('/admin-systeme/destroy/structures/{id}', [GestionStructureController::class, 'destroy'])->name('structure.destroy'); // Supprimer une structure
+        Route::get('/admin-systeme/edit/structures/{id}', [GestionStructureController::class, 'edit'])->name('structure.edit');    // (optionnel) Formulaire d'édition
 
         // Invitation
         Route::get('/admin-systeme/view/invitations', [InvitationController::class, 'index'])->name('invitation');

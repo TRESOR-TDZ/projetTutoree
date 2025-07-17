@@ -24,7 +24,9 @@ return new class extends Migration
             $table->string('adresse')->nullable();
             $table->string('service')->nullable();
             $table->string('type_structure')->nullable();
-            $table->string('horaires')->nullable();
+
+            $table->time('horaires_debut')->nullable();
+            $table->time('horaires_fin')->nullable();
 
             $table->timestamps();
         });

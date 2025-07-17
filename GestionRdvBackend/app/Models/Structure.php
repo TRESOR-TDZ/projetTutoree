@@ -21,6 +21,8 @@ class Structure extends Model
         'adresse',
         'service',
         'type_structure',
-        'horaires',
+
+        'horaires_debut',
+        'horaires_fin',
     ];
 }

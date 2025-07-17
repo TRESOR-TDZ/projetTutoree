@@ -315,11 +315,11 @@ class GestionDoctorController extends Controller
 
         $users = $query->get();
 
-        $pdf = Pdf::loadView('Documents.AdminSysteme.listes_admin_structure_pdf', compact('users'))
+        $pdf = Pdf::loadView('Documents.AdminSysteme.listes_docteurs_pdf', compact('users'))
                 ->setPaper('A4', 'portrait');
 
         $date = now()->format('d-m-Y_His');
-        $fileName = "listes_utilisateurs(admin_structure)_$date.pdf";
+        $fileName = "listes_utilisateurs(docteurs)_$date.pdf";
 
         return response()->make($pdf->output(), 200, [
             'Content-Type' => 'application/pdf',
@@ -404,7 +404,7 @@ class GestionDoctorController extends Controller
         };
 
         $date = now()->format('d-m-Y_His');
-        $fileName = "listes_utilisateurs(admin_structure)_$date.xlsx";
+        $fileName = "listes_utilisateurs(docteurs)_$date.xlsx";
 
         return Excel::download($export, $fileName);
     }
