@@ -26,7 +26,7 @@ return new class extends Migration
             $table->string('code_phone')->nullable(); // Code du pays pour le téléphone
             $table->string('phone')->nullable(); // Numéro de téléphone
 
-            $table->string('status')->default('Actif');
+            $table->string('status')->default('Déconnecté');
             $table->boolean('role')->default(false); //add type boolean Users: 0=>Patient, 1=>Doteur, 2=>Admin Structure 3=>Admin Systeme
 
             $table->string('structure_id')->nullable(); // FK si user rattaché à une structure

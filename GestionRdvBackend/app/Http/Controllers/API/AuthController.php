@@ -82,6 +82,10 @@ class AuthController extends Controller
             ], 401);
         }
 
+        // Mettre à jour le statut à "Connecté"
+        $user->status = 'Connecté';
+        $user->update();
+
         $token = $user->createToken('authToken')->plainTextToken;
 
         return response()->json([
@@ -96,8 +100,25 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
+        $user = $request->user();
+
+        // Vérifier si l'utilisateur est authentifié
+        if (!$user) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Utilisateur non authentifié',
+            ], 401);
+        }
+
+        // Mettre à jour le statut à "Déconnecté"
+        $user->status = 'Déconnecté';
+        $user->update();
+
         $request->user()->tokens()->delete();
-        return response()->json(['message' => 'Deconnexion reussie']);
+
+        return response()->json([
+            'message' => 'Deconnexion reussie'
+        ]);
     }
 
     public function me(Request $request)
@@ -116,7 +137,13 @@ class AuthController extends Controller
             'gender'     => 'nullable|string|in:male,female,other',
             'code_phone' => 'nullable|string|max:10',
             'phone'      => 'nullable|string|max:20',
-            'password'   => 'nullable|string|min:6|confirmed',
+            'password'   => ['nullable', 'confirmed', Password::min(8)
+                ->mixedCase()     // Majuscules et minuscules
+                ->letters()       // Lettres requises
+                ->numbers()       // Chiffres requis
+                // ->symbols()       // Caractères spéciaux requis
+                ->uncompromised() // Non présent dans des fuites de données connues
+            ],
         ]);
 
         if ($validator->fails()) {

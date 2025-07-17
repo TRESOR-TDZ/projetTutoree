@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Liste des Administrateurs Système</title>
+    <title>Liste des Patients de la plateforme</title>
     <style>
         body {
             font-family: DejaVu Sans, sans-serif;

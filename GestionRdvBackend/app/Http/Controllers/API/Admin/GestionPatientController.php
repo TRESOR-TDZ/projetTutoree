@@ -76,6 +76,7 @@ class GestionPatientController extends Controller
         $validator = Validator::make($request->all(), [
             'name'     => 'required|string|max:255',
             'email'    => 'required|email|unique:users,email',
+            'structure_id' => 'nullable|string',
             'password' => ['required', 'confirmed', Password::min(8)
                 ->mixedCase()     // Majuscules et minuscules
                 ->letters()       // Lettres requises
@@ -93,18 +94,19 @@ class GestionPatientController extends Controller
             ], 422);
         }
 
-        $admin = User::create([
-            'matricule' => 'ADM' . date('YmdHis') . rand(100, 999), // Génération d'un matricule unique
+        $patient = User::create([
+            'matricule' => 'PAT' . date('YmdHis') . rand(100, 999), // Génération d'un matricule unique
             'name'     => $request->name,
             'email'    => $request->email,
             'password' => Hash::make($request->password),
+            'structure_id' => $request->structure_id,
             'role'     => '0',
         ]);
 
         return response()->json([
             'status'  => 'success',
-            'message' => 'Administrateur ajouté avec succès',
-            'data'    => $admin,
+            'message' => 'Patient ajouté avec succès',
+            'data'    => $patient,
         ], 201);
     }
 
@@ -167,7 +169,7 @@ class GestionPatientController extends Controller
     }
 
     // -----------------------------------------------------
-    // ?ise à jour de l'administrateur
+    // Mise à jour de l'administrateur
     // -----------------------------------------------------
     public function update(Request $request, $id)
     {
@@ -188,8 +190,15 @@ class GestionPatientController extends Controller
                 'gender'     => 'nullable|string|in:male,female,other',
                 'code_phone' => 'nullable|string|max:10',
                 'phone'      => 'nullable|string|max:20',
-                'role'       => 'nullable|string|in:0,1,2,3', // adapte selon tes rôles
-                'password'   => 'nullable|string|min:6|confirmed',
+                'role'       => 'nullable|string|in:0,1,2,3', //
+                'structure_id' => 'nullable|string',
+                'password'   => ['nullable', 'confirmed', Password::min(8)
+                    ->mixedCase()     // Majuscules et minuscules
+                    ->letters()       // Lettres requises
+                    ->numbers()       // Chiffres requis
+                    // ->symbols()       // Caractères spéciaux requis
+                    ->uncompromised() // Non présent dans des fuites de données connues
+                ],
             ]);
 
             if (!empty($validated['password'])) {

@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Liste des Administrateurs Système de la plateforme</title>
+    <title>Liste des Administrateurs de structure de la plateforme</title>
     <style>
         body {
             font-family: DejaVu Sans, sans-serif;
@@ -69,7 +69,7 @@
 
     <header>
         {{--  <img src="{{ public_path('Application/logo/logo1.png') }}" alt="Logo">  --}}
-        <h2>Liste des Administrateurs Systeme de la plateforme</h2>
+        <h2>Liste des Administrateurs de structure de la plateforme</h2>
         <p class="date">Généré le {{ \Carbon\Carbon::now()->format('d/m/Y à H:i') }}</p>
     </header>
 
