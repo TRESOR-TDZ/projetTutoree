@@ -45,7 +45,7 @@ class GestionStructureController extends Controller
                 $query->whereDate('created_at', $request->created_at);
             }
 
-            $structures = $query->orderBy('created_at', 'desc')->paginate(10);
+            $structures = $query->orderBy('created_at', 'desc')->paginate(4);
 
             return response()->json([
                 'success' => true,
@@ -142,7 +142,7 @@ class GestionStructureController extends Controller
     }
 
     // -----------------------------------------------------
-    // Visualisation de l'administrateur
+    // Visualisation de la structure
     // -----------------------------------------------------
     public function show($id)
     {
@@ -163,7 +163,7 @@ class GestionStructureController extends Controller
     }
 
     // -----------------------------------------------------
-    // Edition de l'administrateur
+    // Edition de la structure
     // -----------------------------------------------------
     public function edit($id)
     {
@@ -184,7 +184,7 @@ class GestionStructureController extends Controller
     }
 
     // -----------------------------------------------------
-    // ?ise à jour de l'administrateur
+    // Mise à jour de la structure
     // -----------------------------------------------------
     public function update(Request $request, $id)
     {
@@ -265,7 +265,7 @@ class GestionStructureController extends Controller
 
 
     // -----------------------------------------------------
-    // Suppression de l'administrateur
+    // Suppression de la structure
     // -----------------------------------------------------
     public function destroy($id)
     {

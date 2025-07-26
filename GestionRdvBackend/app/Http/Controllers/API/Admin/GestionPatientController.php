@@ -15,7 +15,11 @@ use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Response;
 use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 use Illuminate\Validation\Rules\Password;
+
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 
 class GestionPatientController extends Controller
 {
@@ -40,6 +44,29 @@ class GestionPatientController extends Controller
                         $sq->where('nom', 'like', "%$search%");
                     });
                 });
+            }
+
+            // Filtrer par date de création si passé
+            if ($request->filled('created_at')) {
+                try {
+                    $date = Carbon::parse($request->created_at)->format('Y-m-d');
+                    $query->whereDate('created_at', $date);
+                } catch (\Exception $e) {
+                    // Optionnel : gérer l'erreur si la date n'est pas valide
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Format de date invalide pour created_at.'
+                    ], 422);
+                }
+            }
+
+            // Exemple filtre sur un champ "status" si nécessaire
+            if ($request->filled('status')) {
+                $query->where('status', $request->status);
+            }
+
+            if ($request->filled('gender')) {
+                $query->where('gender', $request->gender);
             }
 
             $patients = $query->latest()->get();
@@ -139,6 +166,7 @@ class GestionPatientController extends Controller
         }
     }
 
+
     // -----------------------------------------------------
     // Edition de l'administrateur
     // -----------------------------------------------------
@@ -184,13 +212,13 @@ class GestionPatientController extends Controller
             }
 
             $validated = $request->validate([
+                'profil'     => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
                 'name'       => 'sometimes|string|max:255',
                 'email'      => 'sometimes|email|unique:users,email,' . $user->id,
                 'birthday'   => 'nullable|date',
-                'gender'     => 'nullable|string|in:male,female,other',
+                'gender'     => 'nullable|string|in:Masculin,Féminin,Autre',
                 'code_phone' => 'nullable|string|max:10',
                 'phone'      => 'nullable|string|max:20',
-                'role'       => 'nullable|string|in:0,1,2,3', //
                 'structure_id' => 'nullable|string',
                 'password'   => ['nullable', 'confirmed', Password::min(8)
                     ->mixedCase()     // Majuscules et minuscules
@@ -200,6 +228,24 @@ class GestionPatientController extends Controller
                     ->uncompromised() // Non présent dans des fuites de données connues
                 ],
             ]);
+
+            // Gestion de l'upload de l'image de profil
+            if ($request->hasFile('profil')) {
+                $file = $request->file('profil');
+                $extension = $file->getClientOriginalExtension();
+                $fileName = Str::uuid() . '.' . $extension;
+
+                // Stocker dans storage/app/public/profil
+                $file->storeAs('profil', $fileName, 'public');
+
+                // Supprimer l'ancien fichier s'il existe
+                if ($user->profil && Storage::disk('public')->exists('profil/' . $user->profil)) {
+                    Storage::disk('public')->delete('profil/' . $user->profil);
+                }
+
+                // Ajouter le nom du fichier aux données validées
+                $validated['profil'] = $fileName;
+            }
 
             if (!empty($validated['password'])) {
                 $validated['password'] = Hash::make($validated['password']);

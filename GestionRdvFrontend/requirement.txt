@@ -1,0 +1,12 @@
+npx create-react-app gestionrdvfromtend
+
+npm install axios react-router-dom
+npm install bootstrap
+npm install feather-icons 
+npm install react-bootstrap bootstrap
+npm install js-file-download
+npm install chart.js react-chartjs-2
+npm install lucide-react
+npm install animate.css --save
+
+npm start

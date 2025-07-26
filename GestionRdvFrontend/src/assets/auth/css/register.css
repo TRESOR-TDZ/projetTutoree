@@ -1,0 +1,122 @@
+:root {
+  --bg-main: #f8f9fa;
+  --card-bg: #ffffff;
+  --text-main: #2c3e50;
+  --accent: #5e60ce;
+}
+
+[data-theme="dark"] {
+  --bg-main: #1e1e2f;
+  --card-bg: #2a2b3d;
+  --text-main: #ecf0f1;
+}
+
+body, html {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--bg-main);
+  color: var(--text-main);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  min-height: 100vh;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  /* background: linear-gradient(130deg, #5e60ce, #48bfe3, #5390d9); */
+  background-size: 400% 400%;
+  animation: gradientAnimation 15s ease infinite;
+  z-index: -2;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  backdrop-filter: blur(10px);
+  background-color: rgba(255,255,255,0.05);
+  z-index: -1;
+}
+
+@keyframes gradientAnimation {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.register-container {
+  max-width: 1000px;
+  margin: auto;
+  background-color: var(--card-bg);
+  border-radius: 20px;
+  box-shadow: 0 4px 30px rgba(0,0,0,0.1);
+  overflow: hidden;
+  display: flex;
+  flex-wrap: wrap;
+  min-height: 600px;
+}
+
+.register-form {
+  flex: 1 1 60%;
+  padding: 3rem;
+  background-color: var(--card-bg);
+  color: var(--text-main);
+}
+
+.register-info {
+  flex: 1 1 30%;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 3rem;
+}
+
+.register-info h3,
+.register-info p {
+  color: #fff;
+}
+
+@media (max-width: 991.98px) {
+  .register-container {
+    flex-direction: column;
+    min-height: auto;
+  }
+
+  .register-info {
+    display: none;
+  }
+
+  .register-form {
+    flex: 1 1 100%;
+    padding: 2rem 1.5rem;
+  }
+}
+
+/* Style pour le bouton d’alternance thème */
+.theme-toggle {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  background-color: var(--card-bg);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.theme-toggle:hover {
+  background-color: var(--accent);
+  color: var(--card-bg);
+  transition: 0.3s ease;
+}

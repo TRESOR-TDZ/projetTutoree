@@ -18,6 +18,9 @@ use Illuminate\Validation\Rules\Password;
 use App\Models\Structure;
 use Carbon\Carbon;
 
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
+
 class GestionDoctorController extends Controller
 {
     // -----------------------------------------------------
@@ -140,7 +143,7 @@ class GestionDoctorController extends Controller
     public function show($id)
     {
         try {
-            $user = User::where('role', 1)->find($id);
+            $user = User::with('structure')->where('role', 1)->find($id);
 
             if (!$user) {
                 return response()->json([
@@ -169,7 +172,7 @@ class GestionDoctorController extends Controller
     public function edit($id)
     {
         try {
-            $user = User::where('role', 1)->find($id);
+            $user = User::with('structure')->where('role', 1)->find($id);
 
             if (!$user) {
                 return response()->json([
@@ -208,13 +211,13 @@ class GestionDoctorController extends Controller
             }
 
             $validated = $request->validate([
+                'profil'     => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
                 'name'       => 'sometimes|string|max:255',
                 'email'      => 'sometimes|email|unique:users,email,' . $user->id,
                 'birthday'   => 'nullable|date',
-                'gender'     => 'nullable|string|in:male,female,other',
+                'gender'     => 'nullable|string|in:Masculin,Féminin,Autre',
                 'code_phone' => 'nullable|string|max:10',
                 'phone'      => 'nullable|string|max:20',
-                'role'       => 'nullable|string|in:0,1,2,3', //
                 'structure_id' => 'nullable|string',
                 'password'   => ['nullable', 'confirmed', Password::min(8)
                     ->mixedCase()     // Majuscules et minuscules
@@ -224,6 +227,24 @@ class GestionDoctorController extends Controller
                     ->uncompromised() // Non présent dans des fuites de données connues
                 ],
             ]);
+
+            // Gestion de l'upload de l'image de profil
+            if ($request->hasFile('profil')) {
+                $file = $request->file('profil');
+                $extension = $file->getClientOriginalExtension();
+                $fileName = Str::uuid() . '.' . $extension;
+
+                // Stocker dans storage/app/public/profil
+                $file->storeAs('profil', $fileName, 'public');
+
+                // Supprimer l'ancien fichier s'il existe
+                if ($user->profil && Storage::disk('public')->exists('profil/' . $user->profil)) {
+                    Storage::disk('public')->delete('profil/' . $user->profil);
+                }
+
+                // Ajouter le nom du fichier aux données validées
+                $validated['profil'] = $fileName;
+            }
 
             if (!empty($validated['password'])) {
                 $validated['password'] = Hash::make($validated['password']);

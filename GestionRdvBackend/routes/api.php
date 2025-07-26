@@ -2,11 +2,15 @@
 
 use App\Http\Controllers\API\Admin\GestionAdminController;
 use App\Http\Controllers\API\Admin\GestionAdminStructureController;
+use App\Http\Controllers\API\Admin\GestionDashboardAdminController;
 use App\Http\Controllers\API\Admin\GestionDoctorController;
 use App\Http\Controllers\API\Admin\GestionPatientController;
 use App\Http\Controllers\API\Admin\GestionStructureController;
+use App\Http\Controllers\API\AdminStr\GestionDoctorStrController;
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\InvitationController;
+use App\Http\Controllers\API\Patient\DocteurPatController;
+use App\Http\Controllers\API\Patient\StructurePatController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -42,7 +46,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Admin uniquement (role = 3)
     Route::middleware('role:3')->group(function () {
-        Route::get('/admin-systeme/dashboard', fn() => response()->json(['message' => 'Bienvenue Admin']));
+        Route::get('/admin-systeme/dashboard', [GestionDashboardAdminController::class, 'index'])->name('admin-systeme.dashboard');
 
         // Gestion Admin systeme
         Route::get('/admin-systeme/view/admin-systeme', [GestionAdminController::class, 'index'])->name('admin-systeme.index');           // Liste des admin systeme
@@ -73,6 +77,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/admin-systeme/update/admin-structure/{id}', [GestionAdminStructureController::class, 'update'])->name('admin-structure.update');     // Modifier un admin structure
         Route::delete('/admin-systeme/destroy/admin-structure/{id}', [GestionAdminStructureController::class, 'destroy'])->name('admin-structure.destroy');// Supprimer un admin structure
         Route::get('/admin-systeme/edit/admin-structure/{id}', [GestionAdminStructureController::class, 'edit'])->name('admin-structure.edit');    // (optionnel) Formulaire d'édition
+
+        Route::get('/admin-systeme/download-pdf/admin-structure/{id}', [GestionAdminStructureController::class, 'downloadPDF'])->name('admin-structure.download-pdf');
+        Route::get('/admin-systeme/view-pdf/admin-structure/{id}', [GestionAdminStructureController::class, 'viewPDF'])->name('admin-structure.view-pdf');
 
         Route::get('/admin-systeme/download/liste/admin-structure/excel', [GestionAdminStructureController::class, 'exportExcelApi']);
         Route::get('/admin-systeme/download/liste/admin-structure/pdf', [GestionAdminStructureController::class, 'exportPdfApi']);
@@ -106,6 +113,21 @@ Route::middleware('auth:sanctum')->group(function () {
     // Admin Structure uniquement (role = 2)
     Route::middleware('role:2')->group(function () {
         Route::get('/admin-structure/dashboard', fn() => response()->json(['message' => 'Bienvenue Docteur']));
+
+        // Gestion Docteurs
+        Route::get('/admin-structure/view/docteur', [GestionDoctorStrController::class, 'index'])->name('admin-structure.index.doctor');           // Liste des doctor
+        Route::get('/admin-structure/show/docteur/{id}', [GestionDoctorStrController::class, 'show'])->name('admin-structure.show.doctor');         // Voir un doctor
+        Route::post('/admin-structure/store/docteur', [GestionDoctorStrController::class, 'store'])->name('admin-structure.store.doctor');          // Ajouter un doctor
+        Route::put('/admin-structure/update/docteur/{id}', [GestionDoctorStrController::class, 'update'])->name('admin-structure.update.doctor');     // Modifier un doctor
+        Route::delete('/admin-structure/destroy/docteur/{id}', [GestionDoctorStrController::class, 'destroy'])->name('admin-structure.destroy.doctor');// Supprimer un doctor
+        Route::get('/admin-structure/edit/docteur/{id}', [GestionDoctorStrController::class, 'edit'])->name('admin-structure.edit.doctor');    // (optionnel) Formulaire d'édition
+
+        Route::get('/admin-structure/download/liste/docteur/excel', [GestionDoctorStrController::class, 'exportExcelApi']);
+        Route::get('/admin-structure/download/liste/docteur/pdf', [GestionDoctorStrController::class, 'exportPdfApi']);
+
+        // Invitation
+        Route::get('/admin-structure/view/invitations', [InvitationController::class, 'index'])->name('invitation.doctor');
+        Route::post('admin-structure/invitation/users', [InvitationController::class, 'store'])->name('invitations.store');
     });
 
     // Docteur uniquement (role = 1)
@@ -116,6 +138,17 @@ Route::middleware('auth:sanctum')->group(function () {
     // Patient uniquement (role = 0)
     Route::middleware('role:0')->group(function () {
         Route::get('/patient/dashboard', fn() => response()->json(['message' => 'Bienvenue Patient']));
+
+        // Visualisation des structures
+        Route::get('/patient/view/structure', [StructurePatController::class, 'index'])->name('patient.index.structures');
+        Route::get('/patient/show/structure/{id}', [StructurePatController::class, 'show'])->name('patient.show.structures');
+
+        // Visualisation des docteurs par structure
+        Route::get('/patient/view/doctor', [DocteurPatController::class, 'index'])->name('patient.index.doctor');
+        Route::get('/patien/show/docteur/{id}', [DocteurPatController::class, 'show'])->name('patient.show.doctor');
+
+        // Visualisation des rendez-vous
+
     });
 
 });

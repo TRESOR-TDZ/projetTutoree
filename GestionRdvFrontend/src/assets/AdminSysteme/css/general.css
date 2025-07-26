@@ -1,0 +1,199 @@
+/* CSS pour l'interface d'administration du système de gestion des rendez-vous */
+
+body,
+.main-content,
+.container {
+  background-color: var(--bg-main) !important;
+  color: var(--text-main);
+}
+
+.card {
+  background-color: var(--card-bg);
+  color: var(--text-main);
+  box-shadow: 0 4px 6px var(--shadow);
+}
+
+.dashboard-muted {
+  color: var(--text-muted);
+}
+
+.table {
+  background-color: var(--card-bg);
+  color: var(--text-main);
+  border: 1px solid var(--shadow);
+}
+
+.shadow-sm {
+  box-shadow: 0 1px 3px var(--shadow);
+  background-color: var(--card-bg);
+  color: var(--text-main);
+  box-shadow: 0 4px 6px var(--shadow);
+}
+
+/* === TABLE ADAPTÉE AU DARK MODE === */
+[data-theme="dark"] .table {
+  background-color: var(--card-bg) !important;; 
+  color: var(--text-main) !important;;
+}
+
+[data-theme="dark"] .table thead {
+  background-color: #2e2e4d !important;
+  color: #fff;
+}
+
+[data-theme="dark"] .table-striped > tbody > tr:nth-of-type(odd) {
+  background-color: var(--bs-table-striped-bg) !important;;
+}
+
+[data-theme="dark"] .table-hover tbody tr:hover {
+  background-color: var(--bs-table-hover-bg) !important;;
+}
+
+/* === BARRE DE RECHERCHE (form-control) DARK MODE === */
+[data-theme="dark"] .form-control {
+  background-color: #2f3144;
+  color: #fff;
+  border-color: #444;
+}
+
+[data-theme="dark"] .form-control::placeholder {
+  color: #bbb;
+}
+
+/* Bouton (search, PDF, Excel) dark-friendly */
+[data-theme="dark"] .btn-outline-primary {
+  color: #5e60ce;
+  border-color: #5e60ce;
+}
+[data-theme="dark"] .btn-outline-primary:hover {
+  background-color: #5e60ce;
+  color: white;
+}
+
+[data-theme="dark"] .btn-outline-success {
+  color: #3ddc97;
+  border-color: #3ddc97;
+}
+[data-theme="dark"] .btn-outline-success:hover {
+  background-color: #3ddc97;
+  color: white;
+}
+
+[data-theme="dark"] .table thead {
+  background-color: #2e2e4d !important;
+  color: #ffffff !important;
+  border-color: #444 !important;
+}
+
+[data-theme="dark"] .table tbody {
+  background-color: var(--card-bg) !important;;
+  color: var(--text-main) !important;;
+}
+
+[data-theme="dark"] .table-striped > tbody > tr:nth-of-type(odd) {
+  background-color: var(--bs-table-striped-bg); /* = #2e2e4d */
+}
+
+[data-theme="dark"] .table-hover tbody tr:hover {
+  background-color: var(--bs-table-hover-bg) !important;; /* = #3a3a5a */
+  color: var(--text-main) !important;;
+}
+
+.table-custom {
+  background-color: var(--card-bg);
+  color: var(--text-main);
+  border: 1px solid var(--shadow);
+}
+
+.table-custom thead {
+  background-color: var(--card-bg);
+  color: var(--text-main);
+  border-bottom: 1px solid var(--shadow);
+}
+
+.table-custom tbody {
+  background-color: var(--card-bg);
+  color: var(--text-main);
+}
+
+.table-custom tr {
+  background-color: var(--card-bg);
+  color: var(--text-main);
+  transition: background-color 0.3s ease;
+}
+
+.table-custom tr:hover {
+  background-color: var(--bs-table-hover-bg, #f1f1f1); /* clair par défaut */
+}
+
+[data-theme="dark"] .table-custom tr:hover {
+  background-color: var(--bs-table-hover-bg, #3a3a5a); /* foncé en dark mode */
+}
+
+.table-custom td, .table-custom th {
+  border-color: var(--shadow);
+}
+
+.modal .modal-body h5 {
+  animation: fadeInDown 0.4s ease-in-out;
+}
+@keyframes fadeInDown {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+/* Collection de degradée*/
+
+/* Bleu Indigo → Cyan clair
+background: linear-gradient(135deg, #3b82f6, #06b6d4);
+Violet doux → Bleu clair
+background: linear-gradient(135deg, #6366f1, #60a5fa);
+Bleu nuit → Violet électrique
+background: linear-gradient(135deg, #1e3a8a, #7c3aed);
+Bleu-gris clair → Indigo
+background: linear-gradient(135deg, #a5b4fc, #6366f1);
+Lavande → Bleu ciel
+background: linear-gradient(135deg, #c084fc, #93c5fd); */
+
+/* Admin Systeme CSS Styles */
+.table-header-gradient {
+  background: linear-gradient(135deg, #4f46e5, #3b82f6);
+  color: white !important;
+}
+
+.table-header-gradient th {
+  background: linear-gradient(135deg, #4f46e5, #3b82f6);
+  color: white !important;
+  vertical-align: middle;
+}
+
+/* Patient */
+.table-header-patient {
+  background: linear-gradient(135deg, #3b82f6, #06b6d4);
+  color: white !important;
+}
+
+.table-header-patient th {
+  background: linear-gradient(135deg, #3b82f6, #06b6d4);
+  color: white !important;
+  vertical-align: middle;
+}
+
+/* Admiin Structure */
+.table-header-adminstr {
+  background: linear-gradient(135deg, #1e3a8a, #7c3aed);
+  color: white !important;
+}
+
+.table-header-adminstr th {
+  background: linear-gradient(135deg, #1e3a8a, #7c3aed);
+  color: white !important;
+  vertical-align: middle;
+}

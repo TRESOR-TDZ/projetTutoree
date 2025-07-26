@@ -18,23 +18,67 @@ use Illuminate\Validation\Rules\Password;
 
 class InvitationController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         try {
-            $invitations = Invitation::with('structure') // si la relation est définie
-                ->orderByDesc('created_at')
-                ->get();
+            $query = Invitation::with('structure')->orderByDesc('created_at');
+
+            // Apply search filter
+            if ($request->has('search') && $request->input('search')) {
+                $searchTerm = $request->input('search');
+                $query->where(function ($q) use ($searchTerm) {
+                    $q->where('email', 'like', '%' . $searchTerm . '%')
+                      ->orWhereHas('structure', function ($sq) use ($searchTerm) {
+                          $sq->where('nom', 'like', '%' . $searchTerm . '%');
+                      });
+                });
+            }
+
+            // Apply role filter
+            if ($request->has('role') && $request->input('role') !== '') {
+                $query->where('role', $request->input('role'));
+            }
+
+            // Apply role filter
+            if ($request->has('status') && $request->input('status') !== '') {
+                $query->where('status', $request->input('status'));
+            }
+
+            // Apply structure filter
+            if ($request->has('structure_id') && $request->input('structure_id') !== '') {
+                $matricule = $request->input('structure_id');
+                $query->whereHas('structure', function ($q) use ($matricule) {
+                    $q->where('matricule', $matricule);
+                });
+            }
+
+            $invitations = $query->get();
+            $structures = Structure::select('id', 'nom', 'matricule')->get();
+
+            // Calculate stats
+            $totalInvitations = Invitation::count();
+            $patientInvitations = Invitation::where('role', 0)->count();
+            $doctorInvitations = Invitation::where('role', 1)->count();
+            $adminStructureInvitations = Invitation::where('role', 2)->count();
+            $adminSystemeInvitations = Invitation::where('role', 3)->count();
+
+            $stats = [
+                'total' => $totalInvitations,
+                'patient' => $patientInvitations,
+                'doctor' => $doctorInvitations,
+                'admin_structure' => $adminStructureInvitations,
+                'admin_systeme' => $adminSystemeInvitations,
+            ];
+
 
             return response()->json([
-                'message' => 'Liste des invitations envoyées',
-                'invitations' => $invitations
-            ], 200);
+                'invitations' => $invitations,
+                'structures' => $structures,
+                'stats' => $stats,
+            ]);
 
         } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Erreur lors de la récupération des invitations',
-                'error' => $e->getMessage()
-            ], 500);
+            return response()->json(['message' => 'Error fetching invitations: ' . $e->getMessage()], 500);
         }
     }
 

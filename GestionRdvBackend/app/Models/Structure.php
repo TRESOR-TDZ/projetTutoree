@@ -25,4 +25,19 @@ class Structure extends Model
         'horaires_debut',
         'horaires_fin',
     ];
+
+    public function users()
+    {
+        return $this->hasMany(User::class, 'structure_id', 'matricule');
+    }
+
+    public function docteurs()
+    {
+        return $this->hasMany(User::class, 'structure_id', 'matricule')->where('role', 1);
+    }
+
+    public function adminStructures()
+    {
+        return $this->hasMany(User::class, 'structure_id', 'matricule')->where('role', 2);
+    }
 }

@@ -1,0 +1,70 @@
+/* assets/css/login.css */
+
+:root {
+  --bg-main: #f8f9fa;
+  --card-bg: #ffffff;
+  --text-main: #2c3e50;
+  --accent: #5e60ce;
+}
+
+[data-theme="dark"] {
+  --bg-main: #1e1e2f;
+  --card-bg: #2a2b3d;
+  --text-main: #ecf0f1;
+}
+
+.login-page {
+  background: var(--bg-main);
+  color: var(--text-main);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  /* padding: 2rem; */
+}
+
+.theme-toggle {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 10;
+}
+
+.login-container {
+  width: 100%;
+  max-width: 1000px;
+  background-color: var(--card-bg);
+  border-radius: 20px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.login-form {
+  flex: 1 1 50%;
+  padding: 2rem;
+  background: var(--card-bg);
+}
+
+.login-info {
+  flex: 1 1 50%;
+  background-size: cover;
+  background-position: center;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 2rem;
+}
+
+@media (max-width: 991.98px) {
+  .login-info {
+    display: none;
+  }
+
+  .login-form {
+    padding: 2rem 1.5rem;
+  }
+}

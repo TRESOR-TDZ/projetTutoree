@@ -11,12 +11,19 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Log;
 
 use Illuminate\Support\Facades\Response;
 use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
+use Exception;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rules\Password;
+
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 
 class GestionAdminStructureController extends Controller
 {
@@ -141,7 +148,7 @@ class GestionAdminStructureController extends Controller
     public function show($id)
     {
         try {
-            $user = User::where('role', 2)->find($id);
+            $user = User::with('structure')->where('role', 2)->find($id);
 
             if (!$user) {
                 return response()->json([
@@ -164,13 +171,91 @@ class GestionAdminStructureController extends Controller
         }
     }
 
+    /**
+     * Télécharger la fiche personnel de l'administrateur de structure en PDF
+     */
+    public function downloadPDF($id)
+    {
+        try {
+            // Récupération de l'utilisateur
+            $user = User::with('structure')->where('role', 2)->findOrFail($id);
+
+            // Données pour le PDF
+            $data = [
+                'user' => $user,
+                'generated_at' => now()->format('d/m/Y à H:i'),
+                'generated_by' => Auth::user()->name ?? 'Système',
+            ];
+
+            // Nom du fichier
+            $fileName = 'fiche-admin-structure-' . Str::slug($user->name) . '-' . now()->format('Y-m-d') . '.pdf';
+
+            // Générer et télécharger le PDF directement
+            $pdf = Pdf::loadView('Documents.AdminSysteme.admin-structure-fiche', $data);
+
+            return $pdf->download($fileName);
+
+        } catch (ModelNotFoundException $e) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Utilisateur introuvable'
+            ], 404);
+        } catch (Exception $e) {
+            Log::error('Erreur downloadPDF: ' . $e->getMessage());
+
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Erreur lors de la génération du PDF',
+                'error'   => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Méthode alternative pour visualiser le PDF dans le navigateur
+     */
+    public function viewPDF($id)
+    {
+        try {
+            $user = User::with('structure')
+                    ->where('role', 2)
+                    ->find($id);
+
+            if (!$user) {
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => 'Utilisateur introuvable'
+                ], 404);
+            }
+
+            $data = [
+                'user' => $user,
+                'generated_at' => Carbon::now()->format('d/m/Y à H:i'),
+                'generated_by' => Auth::user()->name ?? 'Système',
+            ];
+
+            $pdf = Pdf::loadView('Documents.AdminSysteme.admin-structure-fiche', $data)
+                    ->setPaper('A4', 'portrait');
+
+            // Retourner le PDF pour visualisation dans le navigateur
+            return $pdf->stream('fiche-admin-structure-' . Str::slug($user->name) . '.pdf');
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Une erreur est survenue lors de la génération du PDF',
+                'error'   => $e->getMessage()
+            ], 500);
+        }
+    }
+
     // -----------------------------------------------------
     // Edition de l'administrateur de structure
     // -----------------------------------------------------
     public function edit($id)
     {
         try {
-            $user = User::where('role', 2)->find($id);
+            $user = User::with('structure')->where('role', 2)->find($id);
 
             if (!$user) {
                 return response()->json([
@@ -209,13 +294,13 @@ class GestionAdminStructureController extends Controller
             }
 
             $validated = $request->validate([
+                'profil'     => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
                 'name'       => 'sometimes|string|max:255',
                 'email'      => 'sometimes|email|unique:users,email,' . $user->id,
                 'birthday'   => 'nullable|date',
-                'gender'     => 'nullable|string|in:male,female,other',
+                'gender'     => 'nullable|string|in:Masculin,Féminin,Autre',
                 'code_phone' => 'nullable|string|max:10',
                 'phone'      => 'nullable|string|max:20',
-                'role'       => 'nullable|string|in:0,1,2,3', //
                 'structure_id' => 'nullable|string',
                 'password'   => ['nullable', 'confirmed', Password::min(8)
                     ->mixedCase()     // Majuscules et minuscules
@@ -225,6 +310,24 @@ class GestionAdminStructureController extends Controller
                     ->uncompromised() // Non présent dans des fuites de données connues
                 ],
             ]);
+
+            // Gestion de l'upload de l'image de profil
+            if ($request->hasFile('profil')) {
+                $file = $request->file('profil');
+                $extension = $file->getClientOriginalExtension();
+                $fileName = Str::uuid() . '.' . $extension;
+
+                // Stocker dans storage/app/public/profil
+                $file->storeAs('profil', $fileName, 'public');
+
+                // Supprimer l'ancien fichier s'il existe
+                if ($user->profil && Storage::disk('public')->exists('profil/' . $user->profil)) {
+                    Storage::disk('public')->delete('profil/' . $user->profil);
+                }
+
+                // Ajouter le nom du fichier aux données validées
+                $validated['profil'] = $fileName;
+            }
 
             if (!empty($validated['password'])) {
                 $validated['password'] = Hash::make($validated['password']);
@@ -266,21 +369,46 @@ class GestionAdminStructureController extends Controller
     // -----------------------------------------------------
     public function destroy($id)
     {
-        $user = User::where('role', 2)->find($id);
+        try {
+            $user = User::where('role', 2)->find($id);
 
-        if (!$user) {
+            if (!$user) {
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => 'Utilisateur introuvable'
+                ], 404);
+            }
+
+            // Supprimer la photo de profil s'il y en a une
+            if ($user->profil && Storage::disk('public')->exists($user->profil)) {
+                Storage::disk('public')->delete($user->profil);
+            }
+
+            // Supprimer le fichier du dossier "profil"
+            if (!empty($user->profil)) {
+                $videoPath = public_path('/storage/profil/' . $user->profil);
+
+                if (file_exists($videoPath) && is_file($videoPath)) {
+                    unlink($videoPath);
+                }
+            }
+
+            // Supprimer l'utilisateur
+            $userName = $user->name;
+            $user->delete();
+
+            return response()->json([
+                'status'  => 'success',
+                'message' => "L'administrateur {$userName} a été supprimé avec succès"
+            ], 200);
+
+        } catch (\Exception $e) {
             return response()->json([
                 'status'  => 'error',
-                'message' => 'Utilisateur introuvable'
-            ], 404);
+                'message' => 'Une erreur est survenue lors de la suppression',
+                'error'   => $e->getMessage()
+            ], 500);
         }
-
-        $user->delete();
-
-        return response()->json([
-            'status'  => 'success',
-            'message' => 'Utilisateur supprimé avec succès'
-        ], 200);
     }
 
     // ----------------------------------------------------------------------------

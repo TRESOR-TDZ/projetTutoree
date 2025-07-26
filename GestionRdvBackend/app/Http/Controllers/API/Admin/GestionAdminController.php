@@ -13,7 +13,11 @@ use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Response;
 use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 use Illuminate\Validation\Rules\Password;
+
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 
 
 class GestionAdminController extends Controller
@@ -39,6 +43,29 @@ class GestionAdminController extends Controller
                         $sq->where('nom', 'like', "%$search%");
                     });
                 });
+            }
+
+            if ($request->filled('type_structure')) {
+                $query->where('type_structure', $request->type_structure);
+            }
+
+            // Filtrer par date de création si passé
+            if ($request->filled('created_at')) {
+                try {
+                    $date = Carbon::parse($request->created_at)->format('Y-m-d');
+                    $query->whereDate('created_at', $date);
+                } catch (\Exception $e) {
+                    // Optionnel : gérer l'erreur si la date n'est pas valide
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Format de date invalide pour created_at.'
+                    ], 422);
+                }
+            }
+
+            // Exemple filtre sur un champ "status" si nécessaire
+            if ($request->filled('status')) {
+                $query->where('status', $request->status);
             }
 
             $admins = $query->latest()->get();
@@ -182,13 +209,13 @@ class GestionAdminController extends Controller
             }
 
             $validated = $request->validate([
+                'profil'     => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
                 'name'       => 'sometimes|string|max:255',
                 'email'      => 'sometimes|email|unique:users,email,' . $user->id,
                 'birthday'   => 'nullable|date',
-                'gender'     => 'nullable|string|in:male,female,other',
+                'gender'     => 'nullable|string|in:Masculin,Féminin,Autre',
                 'code_phone' => 'nullable|string|max:10',
                 'phone'      => 'nullable|string|max:20',
-                'role'       => 'nullable|string|in:0,1,2,3',
                 'structure_id' => 'nullable|string',
                 'password' => ['nullable', 'confirmed', Password::min(8)
                     ->mixedCase()     // Majuscules et minuscules
@@ -198,6 +225,24 @@ class GestionAdminController extends Controller
                     ->uncompromised() // Non présent dans des fuites de données connues
                 ],
             ]);
+
+            // Gestion de l'upload de l'image de profil
+            if ($request->hasFile('profil')) {
+                $file = $request->file('profil');
+                $extension = $file->getClientOriginalExtension();
+                $fileName = Str::uuid() . '.' . $extension;
+
+                // Stocker dans storage/app/public/profil
+                $file->storeAs('profil', $fileName, 'public');
+
+                // Supprimer l'ancien fichier s'il existe
+                if ($user->profil && Storage::disk('public')->exists('storage/profil/' . $user->profil)) {
+                    Storage::disk('public')->delete('storage/profil/' . $user->profil);
+                }
+
+                // Ajouter le nom du fichier aux données validées
+                $validated['profil'] = $fileName;
+            }
 
             if (!empty($validated['password'])) {
                 $validated['password'] = Hash::make($validated['password']);
@@ -239,21 +284,49 @@ class GestionAdminController extends Controller
     // -----------------------------------------------------
     public function destroy($id)
     {
-        $user = User::where('role', 3)->find($id);
+        try {
+            $user = User::where('role', 3)->find($id);
 
-        if (!$user) {
+            if (!$user) {
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => 'Utilisateur introuvable'
+                ], 404);
+            }
+
+            // Vérifier s'il y a des relations à gérer avant la suppression
+            // Par exemple, vous pourriez vouloir réassigner les éléments liés à cet admin
+
+            // Supprimer la photo de profil s'il y en a une
+            if ($user->profil && Storage::disk('public')->exists($user->profil)) {
+                Storage::disk('public')->delete($user->profil);
+            }
+
+            // Supprimer le fichier du dossier "profil"
+            if (!empty($user->profil)) {
+                $videoPath = public_path('/storage/profil/' . $user->profil);
+
+                if (file_exists($videoPath) && is_file($videoPath)) {
+                    unlink($videoPath);
+                }
+            }
+
+            // Supprimer l'utilisateur
+            $userName = $user->name;
+            $user->delete();
+
+            return response()->json([
+                'status'  => 'success',
+                'message' => "L'administrateur {$userName} a été supprimé avec succès"
+            ], 200);
+
+        } catch (\Exception $e) {
             return response()->json([
                 'status'  => 'error',
-                'message' => 'Utilisateur introuvable'
-            ], 404);
+                'message' => 'Une erreur est survenue lors de la suppression',
+                'error'   => $e->getMessage()
+            ], 500);
         }
-
-        $user->delete();
-
-        return response()->json([
-            'status'  => 'success',
-            'message' => 'Utilisateur supprimé avec succès'
-        ], 200);
     }
 
     // -------------------------------------------------------------
